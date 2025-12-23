@@ -208,6 +208,8 @@ onMounted(() => {
     minZoom: 2,
     maxZoom: 18,
     worldCopyJump: true,
+    maxBounds: [[-85, -Infinity], [85, Infinity]], // Limit vertical panning, allow horizontal wrap
+    maxBoundsViscosity: 1.0, // Hard stop at bounds
     zoomControl: false,
     attributionControl: false // Custom position
   })
