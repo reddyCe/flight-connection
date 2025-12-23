@@ -14,10 +14,11 @@ export default defineNuxtConfig({
   },
 
   app: {
+    baseURL: '/flight-connection/',
     head: {
-      title: 'Design Template',
+      title: 'Flight Connections',
       meta: [
-        { name: 'description', content: 'Design template application.' }
+        { name: 'description', content: 'Explore global flight routes and plan your trips.' }
       ],
       link: [
         { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
