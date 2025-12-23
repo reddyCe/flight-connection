@@ -77,9 +77,9 @@ const emit = defineEmits<{
                   {{ idx + 1 }}
                 </div>
                 <div class="flex items-center gap-2.5 overflow-hidden flex-1">
-                  <div class="shrink-0 w-6 h-4 rounded-[1px] overflow-hidden shadow-sm relative">
-                    <img 
-                       :src="`https://flagcdn.com/w20/${stop.iso_country.toLowerCase()}.png`" 
+                  <div v-if="stop.iso_country" class="shrink-0 w-6 h-4 rounded-[1px] overflow-hidden shadow-sm relative">
+                    <img
+                       :src="`https://flagcdn.com/w20/${stop.iso_country.toLowerCase()}.png`"
                        class="w-full h-full object-cover"
                        :alt="stop.iso_country"
                     />
@@ -190,6 +190,7 @@ const emit = defineEmits<{
                  <div class="flex items-center gap-1.5 mt-1 text-xs text-muted-foreground">
                    <MapPin class="w-3 h-3" />
                    <img
+                     v-if="selectedAirport.iso_country"
                      :src="`https://flagcdn.com/w20/${selectedAirport.iso_country.toLowerCase()}.png`"
                      class="w-3 h-2.5 object-cover rounded-[1px] shadow-sm"
                      :alt="selectedAirport.iso_country"
@@ -219,9 +220,9 @@ const emit = defineEmits<{
                   <!-- Left: City + Flag -->
                   <div class="flex items-center gap-2.5 overflow-hidden flex-1 min-w-0">
                     <div class="shrink-0 w-5 h-3.5 rounded-[1px] overflow-hidden shadow-sm relative">
-                      <img 
-                         v-if="airportsByIata.get(dest)"
-                         :src="`https://flagcdn.com/w20/${airportsByIata.get(dest)!.iso_country.toLowerCase()}.png`" 
+                      <img
+                         v-if="airportsByIata.get(dest)?.iso_country"
+                         :src="`https://flagcdn.com/w20/${airportsByIata.get(dest)!.iso_country.toLowerCase()}.png`"
                          class="w-full h-full object-cover"
                          alt="flag"
                       />
