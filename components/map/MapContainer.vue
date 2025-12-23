@@ -34,6 +34,7 @@ const visibleMarkers = ref<Set<string>>(new Set()) // Track what's currently on 
 // Visual Elements
 const activeArcs = ref<any[]>([]) // Potential destination arcs (L.geodesic returns a specialized layer)
 const sequenceLines = ref<any[]>([]) // Confirmed route lines
+const cityLabels = ref<any[]>([]) // City name labels when route is finalized
 
 // Tile URLs
 const darkTileUrl = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
@@ -71,12 +72,14 @@ function drawGeodesicWithWorldCopies(
   return lines
 }
 
-// Clear all lines
+// Clear all lines and labels
 function clearLines() {
   activeArcs.value.forEach(l => l.remove())
   activeArcs.value = []
   sequenceLines.value.forEach(l => l.remove())
   sequenceLines.value = []
+  cityLabels.value.forEach(l => l.remove())
+  cityLabels.value = []
 }
 
 // Fit map view to show the current sequence
@@ -185,6 +188,30 @@ function updateMapState() {
         }
       })
     }
+  }
+
+  // 5. Add city labels when route is finalized
+  if (props.isRouteFinalized && props.sequence.length > 0) {
+    props.sequence.forEach((airport, idx) => {
+      if (airport.latitude_deg && airport.longitude_deg) {
+        const cityName = airport.municipality || airport.name?.split(' ')[0] || airport.iata_code
+
+        // Create label for each world copy
+        for (const offset of [-360, 0, 360]) {
+          const label = $L.marker([airport.latitude_deg, airport.longitude_deg + offset], {
+            icon: $L.divIcon({
+              className: 'city-label',
+              html: `<span class="city-label-text">${cityName}</span>`,
+              iconSize: [0, 0],
+              iconAnchor: [-8, 4]
+            }),
+            interactive: false
+          }).addTo(map.value!)
+
+          cityLabels.value.push(label)
+        }
+      }
+    })
   }
 }
 
@@ -319,6 +346,26 @@ onUnmounted(() => {
 
 .leaflet-tooltip-top:before {
   border-top-color: hsl(var(--border));
+}
+
+/* City labels for finalized routes */
+.city-label {
+  background: transparent !important;
+  border: none !important;
+}
+
+.city-label-text {
+  font-size: 11px;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+  text-shadow:
+    -1px -1px 0 hsl(var(--background)),
+    1px -1px 0 hsl(var(--background)),
+    -1px 1px 0 hsl(var(--background)),
+    1px 1px 0 hsl(var(--background)),
+    0 0 4px hsl(var(--background));
+  white-space: nowrap;
+  pointer-events: none;
 }
 
 .leaflet-bar {
