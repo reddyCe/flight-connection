@@ -13,6 +13,12 @@ const colorMode = useColorMode()
 const isDark = computed(() => colorMode.value === 'dark')
 const isSatellite = ref(false)
 
+// Map container ref for calling methods
+const mapContainerRef = ref<InstanceType<typeof MapContainer> | null>(null)
+
+// Panel minimized state
+const isPanelMinimized = ref(false)
+
 function toggleColorMode() {
   colorMode.preference = colorMode.value === 'dark' ? 'light' : 'dark'
 }
@@ -68,6 +74,15 @@ function handleSaveRoute() {
   }
 }
 
+// Handle loading a saved route and centering the map on it
+function handleLoadRoute(route: Parameters<typeof loadSavedRoute>[0]) {
+  loadSavedRoute(route)
+  // Center map on the loaded route after a tick for state to update
+  nextTick(() => {
+    mapContainerRef.value?.fitToSequence()
+  })
+}
+
 // Handle marker click logic (similar to original but using composable actions)
 function onMarkerClick(airport: Airport) {
   if (isRouteFinalized.value) return
@@ -103,21 +118,18 @@ function onMarkerClick(airport: Airport) {
     <MapHeader
       :total-airports="totalAirports"
       :total-destinations="totalDestinations"
-      :sequence="sequence"
-      :start-date="startDate"
       :is-dark="isDark"
       :is-satellite="isSatellite"
       :saved-routes="savedRoutes"
       @toggle-color-mode="toggleColorMode"
       @toggle-map-style="toggleMapStyle"
-      @reset-sequence="resetSequence"
-      @update:start-date-value="startDateValue = $event"
-      @load-route="loadSavedRoute"
+      @load-route="handleLoadRoute"
       @delete-route="deleteRoute"
     />
 
     <!-- Map Container -->
     <MapContainer
+      ref="mapContainerRef"
       :active-airports="activeAirports"
       :airports-by-iata="airportsByIata"
       :sequence="sequence"
@@ -128,18 +140,22 @@ function onMarkerClick(airport: Airport) {
     />
 
     <!-- Info Panel -->
-    <MapInfoPanel 
+    <MapInfoPanel
       :selected-airport="selectedAirport"
       :sequence="sequence"
       :is-route-finalized="isRouteFinalized"
+      :is-minimized="isPanelMinimized"
+      :start-date="startDate"
       :kiwi-link="kiwiLink"
       :airports-by-iata="airportsByIata"
-      @close-panel="selectedAirport = null"
-      @reset-sequence="resetSequence"
+      @minimize-panel="isPanelMinimized = true"
+      @expand-panel="isPanelMinimized = false"
+      @reset-sequence="resetSequence(); isPanelMinimized = false"
       @edit-route="isRouteFinalized = false"
       @save-route="handleSaveRoute"
       @add-to-sequence="addToSequence"
       @finalize-route="finalizeRoute"
+      @update:start-date="startDateValue = $event"
     />
 
   </div>

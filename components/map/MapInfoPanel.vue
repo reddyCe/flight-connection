@@ -1,32 +1,41 @@
 <script setup lang="ts">
-import { 
-  X, 
-  Plane, 
-  MapPin, 
-  ExternalLink, 
-  Save, 
+import {
+  Plane,
+  MapPin,
+  ExternalLink,
+  Save,
   ArrowRight,
-  CloudSun
+  CloudSun,
+  ChevronUp,
+  ChevronDown,
+  RotateCcw,
+  Calendar as CalendarIcon
 } from 'lucide-vue-next'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
+import { Calendar } from '@/components/ui/calendar'
 import type { Airport } from '~/composables/useAirportSystem'
 
 const props = defineProps<{
   selectedAirport: Airport | null
   sequence: Airport[]
   isRouteFinalized: boolean
+  isMinimized: boolean
+  startDate: string
   kiwiLink: string
   airportsByIata: Map<string, Airport>
 }>()
 
 const emit = defineEmits<{
-  (e: 'closePanel'): void
+  (e: 'minimizePanel'): void
+  (e: 'expandPanel'): void
   (e: 'resetSequence'): void
   (e: 'editRoute'): void
   (e: 'saveRoute'): void
   (e: 'addToSequence', airport: Airport): void
   (e: 'finalizeRoute'): void
+  (e: 'update:startDate', val: any): void
 }>()
 
 </script>
@@ -47,14 +56,14 @@ const emit = defineEmits<{
         <div class="map-card flex flex-col rounded-t-xl md:rounded-lg">
           
           <!-- TRIP SUMMARY VIEW -->
-          <div v-if="isRouteFinalized" class="flex flex-col max-h-[50vh] md:max-h-[60vh] overflow-hidden">
+          <div v-if="isRouteFinalized && !isMinimized" class="flex flex-col max-h-[50vh] md:max-h-[60vh] overflow-hidden">
             <div class="p-4 bg-muted/30 border-b border-border flex items-center justify-between">
               <div class="flex items-center gap-2">
                 <Plane class="w-4 h-4 text-primary" />
                 <h3 class="font-heading font-black text-lg leading-tight uppercase">Trip Summary</h3>
               </div>
-              <Button variant="ghost" size="icon" class="h-6 w-6 -mr-2 -mt-2" @click="emit('resetSequence')">
-                <X class="w-3 h-3" />
+              <Button variant="ghost" size="icon" class="h-6 w-6 -mr-2 -mt-2" title="Minimize" @click="emit('minimizePanel')">
+                <ChevronDown class="w-3 h-3" />
               </Button>
             </div>
 
@@ -103,46 +112,74 @@ const emit = defineEmits<{
               </div>
             </div>
 
-            <div class="p-3 border-t border-border bg-muted/10 grid grid-cols-2 gap-2">
-               <div class="col-span-2 grid grid-cols-2 gap-2">
-                 <Button 
-                    variant="outline" 
-                    size="sm" 
+            <div class="p-3 border-t border-border bg-muted/10 flex flex-col gap-2">
+               <div class="grid grid-cols-3 gap-2">
+                 <Button
+                    variant="outline"
+                    size="sm"
                     class="w-full text-xs"
                     @click="emit('editRoute')"
                   >
                     Edit Route
                  </Button>
-                 <Button 
-                    variant="outline" 
-                    size="sm" 
+                 <Button
+                    variant="outline"
+                    size="sm"
                     class="w-full text-xs gap-1"
                     @click="emit('saveRoute')"
                   >
                     <Save class="w-3 h-3" />
-                    Save Route
+                    Save
+                 </Button>
+                 <Button
+                    variant="ghost"
+                    size="sm"
+                    class="w-full text-xs gap-1 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    @click="emit('resetSequence')"
+                  >
+                    <RotateCcw class="w-3 h-3" />
+                    Reset
                  </Button>
                </div>
-               <Button 
-                  variant="default" 
-                  size="sm" 
-                  class="w-full text-xs gap-2 bg-[#00a991] hover:bg-[#008f7a] text-white border-0 col-span-2" 
-                  as-child
-                >
-                  <a :href="kiwiLink" target="_blank" rel="noopener noreferrer">
-                    <img 
-                      src="https://play-lh.googleusercontent.com/SlMA_aZk2-2Q_c9K1NU1ZRvIXUFvs5fe2EDTuntNK4D8qPHRLNbncRh0jJGCAmCdMQ" 
-                      class="w-4 h-4 rounded-full bg-white p-0.5"
-                      alt="Kiwi"
-                    />
-                    Search Flights
-                  </a>
-               </Button>
+
+               <!-- Date Picker + Search -->
+               <div class="flex items-center gap-2">
+                 <Popover>
+                   <PopoverTrigger as-child>
+                     <button class="flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-md border border-border/50 hover:bg-muted transition-colors text-xs font-medium">
+                       <CalendarIcon class="w-3.5 h-3.5 text-muted-foreground" />
+                       <span class="font-mono">{{ startDate }}</span>
+                     </button>
+                   </PopoverTrigger>
+                   <PopoverContent class="w-auto p-0" align="start">
+                     <Calendar
+                       :model-value="undefined"
+                       @update:model-value="emit('update:startDate', $event)"
+                     />
+                   </PopoverContent>
+                 </Popover>
+
+                 <Button
+                    variant="default"
+                    size="sm"
+                    class="flex-1 text-xs gap-2 bg-[#00a991] hover:bg-[#008f7a] text-white border-0"
+                    as-child
+                  >
+                    <a :href="kiwiLink" target="_blank" rel="noopener noreferrer">
+                      <img
+                        src="https://play-lh.googleusercontent.com/SlMA_aZk2-2Q_c9K1NU1ZRvIXUFvs5fe2EDTuntNK4D8qPHRLNbncRh0jJGCAmCdMQ"
+                        class="w-4 h-4 rounded-full bg-white p-0.5"
+                        alt="Kiwi"
+                      />
+                      Search Flights
+                    </a>
+                 </Button>
+               </div>
             </div>
           </div>
 
           <!-- STANDARD AIRPORT INFO VIEW -->
-          <div v-else-if="selectedAirport" class="flex flex-col max-h-[50vh] md:max-h-[60vh] overflow-hidden">
+          <div v-else-if="selectedAirport && !isMinimized" class="flex flex-col max-h-[50vh] md:max-h-[60vh] overflow-hidden">
             <div class="p-4 bg-muted/30 border-b border-border flex items-start justify-between">
               <div>
                  <div class="flex items-center gap-2 mb-1">
@@ -152,16 +189,16 @@ const emit = defineEmits<{
                  <h3 class="font-heading font-black text-lg leading-tight">{{ selectedAirport.name }}</h3>
                  <div class="flex items-center gap-1.5 mt-1 text-xs text-muted-foreground">
                    <MapPin class="w-3 h-3" />
-                   <img 
-                     :src="`https://flagcdn.com/w20/${selectedAirport.iso_country.toLowerCase()}.png`" 
+                   <img
+                     :src="`https://flagcdn.com/w20/${selectedAirport.iso_country.toLowerCase()}.png`"
                      class="w-3 h-2.5 object-cover rounded-[1px] shadow-sm"
                      :alt="selectedAirport.iso_country"
                    />
                    {{ selectedAirport.municipality }}, {{ selectedAirport.iso_country }}
                  </div>
               </div>
-              <Button variant="ghost" size="icon" class="h-6 w-6 -mr-2 -mt-2" @click="emit('closePanel')">
-                <X class="w-3 h-3" />
+              <Button variant="ghost" size="icon" class="h-6 w-6 -mr-2 -mt-2" title="Minimize" @click="emit('minimizePanel')">
+                <ChevronDown class="w-3 h-3" />
               </Button>
             </div>
 
@@ -227,31 +264,73 @@ const emit = defineEmits<{
             </div>
             
             <!-- Footer Actions -->
-            <div class="p-3 border-t border-border bg-muted/10 grid grid-cols-2 gap-2">
-               <Button v-if="selectedAirport.wikipedia_link" variant="outline" size="sm" class="w-full gap-2 text-xs" as-child>
-                 <a :href="selectedAirport.wikipedia_link" target="_blank">
-                   <ExternalLink class="w-3 h-3" />
-                   Wiki
-                 </a>
-               </Button>
-               <Button 
-                  v-if="sequence.length > 0 && sequence[sequence.length-1].iata_code === selectedAirport.iata_code"
-                  variant="destructive" 
-                  size="sm" 
-                  class="w-full text-xs"
-                  @click="emit('finalizeRoute')"
+            <div class="p-3 border-t border-border bg-muted/10 flex flex-col gap-2">
+               <div class="grid grid-cols-2 gap-2">
+                 <Button v-if="selectedAirport.wikipedia_link" variant="outline" size="sm" class="w-full gap-2 text-xs" as-child>
+                   <a :href="selectedAirport.wikipedia_link" target="_blank">
+                     <ExternalLink class="w-3 h-3" />
+                     Wiki
+                   </a>
+                 </Button>
+                 <Button
+                    v-if="sequence.length > 0 && sequence[sequence.length-1].iata_code === selectedAirport.iata_code"
+                    variant="destructive"
+                    size="sm"
+                    class="w-full text-xs"
+                    @click="emit('finalizeRoute')"
+                  >
+                    End Route
+                 </Button>
+                 <Button
+                    v-else
+                    variant="default"
+                    size="sm"
+                    class="w-full text-xs"
+                    @click="emit('addToSequence', selectedAirport)"
+                  >
+                    Start Here
+                 </Button>
+               </div>
+               <Button
+                  v-if="sequence.length > 0"
+                  variant="ghost"
+                  size="sm"
+                  class="w-full text-xs gap-1 text-destructive hover:text-destructive hover:bg-destructive/10"
+                  @click="emit('resetSequence')"
                 >
-                  End Route
+                  <RotateCcw class="w-3 h-3" />
+                  Reset Route
                </Button>
-               <Button 
-                  v-else
-                  variant="default" 
-                  size="sm" 
-                  class="w-full text-xs"
-                  @click="emit('addToSequence', selectedAirport)"
-                >
-                  Start Here
-               </Button>
+            </div>
+          </div>
+
+          <!-- MINIMIZED VIEW -->
+          <div
+            v-else-if="isMinimized && (selectedAirport || isRouteFinalized)"
+            class="flex items-center justify-between p-3 cursor-pointer hover:bg-muted/20 transition-colors"
+            @click="emit('expandPanel')"
+          >
+            <div class="flex items-center gap-3 overflow-hidden flex-1 min-w-0">
+              <Plane class="w-4 h-4 text-primary shrink-0" />
+              <div class="flex items-center gap-1.5 min-w-0 overflow-hidden">
+                <span v-if="isRouteFinalized" class="text-sm font-bold truncate">
+                  {{ sequence.length }} stops
+                </span>
+                <span v-else-if="selectedAirport" class="text-sm font-bold truncate">
+                  {{ selectedAirport.municipality || selectedAirport.name }}
+                </span>
+                <span class="text-xs text-muted-foreground">
+                  {{ sequence.map(s => s.iata_code).join(' → ') }}
+                </span>
+              </div>
+            </div>
+            <div class="flex items-center gap-1 shrink-0">
+              <Button variant="ghost" size="icon" class="h-6 w-6" title="Reset route" @click.stop="emit('resetSequence')">
+                <RotateCcw class="w-3 h-3" />
+              </Button>
+              <Button variant="ghost" size="icon" class="h-6 w-6" title="Expand" @click.stop="emit('expandPanel')">
+                <ChevronUp class="w-3 h-3" />
+              </Button>
             </div>
           </div>
         </div>
