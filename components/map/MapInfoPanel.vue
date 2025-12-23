@@ -40,14 +40,14 @@ const emit = defineEmits<{
       leave-from-class="translate-y-0 opacity-100"
       leave-to-class="translate-y-10 opacity-0"
     >
-      <div 
+      <div
         v-if="selectedAirport || isRouteFinalized"
-        class="absolute bottom-6 left-6 z-[1000] w-80 max-w-[calc(100vw-3rem)] pointer-events-auto"
+        class="absolute bottom-0 left-0 right-0 md:bottom-6 md:left-6 md:right-auto z-[1000] w-full md:w-80 md:max-w-[calc(100vw-3rem)] pointer-events-auto"
       >
-        <div class="map-card flex flex-col">
+        <div class="map-card flex flex-col rounded-t-xl md:rounded-lg">
           
           <!-- TRIP SUMMARY VIEW -->
-          <div v-if="isRouteFinalized" class="flex flex-col max-h-[60vh] overflow-hidden">
+          <div v-if="isRouteFinalized" class="flex flex-col max-h-[50vh] md:max-h-[60vh] overflow-hidden">
             <div class="p-4 bg-muted/30 border-b border-border flex items-center justify-between">
               <div class="flex items-center gap-2">
                 <Plane class="w-4 h-4 text-primary" />
@@ -90,7 +90,7 @@ const emit = defineEmits<{
                     v-if="stop.municipality"
                     :href="`https://en.wikipedia.org/wiki/${stop.municipality}#Climate`"
                     target="_blank"
-                    class="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-background/80 rounded-full text-muted-foreground hover:text-amber-500"
+                    class="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity p-1.5 hover:bg-background/80 rounded-full text-muted-foreground hover:text-amber-500"
                     @click.stop
                     title="View Climate"
                   >
@@ -142,7 +142,7 @@ const emit = defineEmits<{
           </div>
 
           <!-- STANDARD AIRPORT INFO VIEW -->
-          <div v-else-if="selectedAirport" class="flex flex-col max-h-[60vh] overflow-hidden">
+          <div v-else-if="selectedAirport" class="flex flex-col max-h-[50vh] md:max-h-[60vh] overflow-hidden">
             <div class="p-4 bg-muted/30 border-b border-border flex items-start justify-between">
               <div>
                  <div class="flex items-center gap-2 mb-1">
@@ -210,7 +210,7 @@ const emit = defineEmits<{
                       v-if="airportsByIata.get(dest)?.municipality"
                       :href="`https://en.wikipedia.org/wiki/${airportsByIata.get(dest)!.municipality}#Climate`"
                       target="_blank"
-                      class="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-background/80 rounded-full text-muted-foreground hover:text-amber-500"
+                      class="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity p-1.5 hover:bg-background/80 rounded-full text-muted-foreground hover:text-amber-500"
                       @click.stop
                       title="View Climate"
                     >
