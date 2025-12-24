@@ -222,9 +222,9 @@ watch([() => props.isDark, () => props.isSatellite], () => {
   }
 })
 
-watch([() => props.sequence, () => props.isRouteFinalized, () => props.activeAirports], () => {
+watch([() => props.sequence.length, () => props.isRouteFinalized], () => {
   updateMapState()
-}, { deep: true })
+})
 
 onMounted(() => {
   if (!mapContainer.value || !$L) return
@@ -318,11 +318,11 @@ function initMarkers() {
   })
 }
 
-// Watch for activeAirports changes
-watch(() => props.activeAirports, () => {
+// Watch for activeAirports length changes (initial load)
+watch(() => props.activeAirports.length, () => {
   initMarkers()
   updateMapState()
-}, { deep: true })
+})
 
 onUnmounted(() => {
   clearLines()
