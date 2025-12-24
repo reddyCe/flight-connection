@@ -3,7 +3,7 @@ import {
   Plane,
   Sun,
   Moon,
-  History,
+  ChevronDown,
   Trash,
   Globe,
   Map
@@ -66,8 +66,8 @@ const emit = defineEmits<{
               size="xs"
               class="h-7 text-[10px] font-bold uppercase hover:text-primary gap-1 px-2"
             >
-              <History class="w-3 h-3" />
               Saved
+              <ChevronDown class="w-3 h-3" />
             </Button>
           </PopoverTrigger>
           <PopoverContent class="w-64 p-0" align="end">

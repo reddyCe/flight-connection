@@ -132,9 +132,9 @@ const emit = defineEmits<{
                     Save
                  </Button>
                  <Button
-                    variant="ghost"
+                    variant="destructive"
                     size="sm"
-                    class="w-full text-xs gap-1 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    class="w-full text-xs gap-1"
                     @click="emit('resetSequence')"
                   >
                     <RotateCcw class="w-3 h-3" />
@@ -275,9 +275,8 @@ const emit = defineEmits<{
                  </Button>
                  <Button
                     v-if="sequence.length > 0 && sequence[sequence.length-1].iata_code === selectedAirport.iata_code"
-                    variant="destructive"
                     size="sm"
-                    class="w-full text-xs"
+                    class="w-full text-xs bg-amber-500 hover:bg-amber-600 text-white"
                     @click="emit('finalizeRoute')"
                   >
                     End Route
@@ -294,9 +293,9 @@ const emit = defineEmits<{
                </div>
                <Button
                   v-if="sequence.length > 0"
-                  variant="ghost"
+                  variant="destructive"
                   size="sm"
-                  class="w-full text-xs gap-1 text-destructive hover:text-destructive hover:bg-destructive/10"
+                  class="w-full text-xs gap-1"
                   @click="emit('resetSequence')"
                 >
                   <RotateCcw class="w-3 h-3" />
@@ -326,7 +325,7 @@ const emit = defineEmits<{
               </div>
             </div>
             <div class="flex items-center gap-1 shrink-0">
-              <Button variant="ghost" size="icon" class="h-6 w-6" title="Reset route" @click.stop="emit('resetSequence')">
+              <Button variant="ghost" size="icon" class="h-6 w-6 hover:bg-destructive hover:text-destructive-foreground" title="Reset route" @click.stop="emit('resetSequence')">
                 <RotateCcw class="w-3 h-3" />
               </Button>
               <Button variant="ghost" size="icon" class="h-6 w-6" title="Expand" @click.stop="emit('expandPanel')">
