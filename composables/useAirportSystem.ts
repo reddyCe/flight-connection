@@ -27,8 +27,11 @@ export function useAirportSystem() {
   // Load airport data
   const { data: airports } = useFetch<Airport[]>('/airports_data.json')
 
-  // Build lookup map for airports by IATA code
+  // Build lookup map for airports by IATA code (active airports only)
   const airportsByIata = ref<Map<string, Airport>>(new Map())
+
+  // Build lookup map for ALL airports (for search)
+  const allAirportsByIata = ref<Map<string, Airport>>(new Map())
 
   // Filter active airports (only those with destinations)
   const activeAirports = computed(() => airports.value?.filter(a => a.destination_count > 0) ?? [])
@@ -52,10 +55,24 @@ export function useAirportSystem() {
     }
   }, { immediate: true })
 
+  // Watch to build ALL airports lookup (for search)
+  watch(airports, (data) => {
+    if (data) {
+      const newMap = new Map<string, Airport>()
+      data.forEach(airport => {
+        if (airport.iata_code) {
+          newMap.set(airport.iata_code, airport)
+        }
+      })
+      allAirportsByIata.value = newMap
+    }
+  }, { immediate: true })
+
   return {
     airports,
     activeAirports,
     airportsByIata,
+    allAirportsByIata,
     totalAirports,
     totalDestinations
   }

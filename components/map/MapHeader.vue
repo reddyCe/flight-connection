@@ -74,12 +74,10 @@ const searchResults = computed(() => {
 
   const query = normalizeForSearch(searchQuery.value)
   const results: Airport[] = []
-  const maxResults = 10
 
   for (const airport of props.airportsByIata.values()) {
-    if (results.length >= maxResults) break
-
-    const matchesIata = airport.iata_code && normalizeForSearch(airport.iata_code).includes(query)
+    const normalizedIata = airport.iata_code ? normalizeForSearch(airport.iata_code) : ''
+    const matchesIata = normalizedIata.includes(query)
     const matchesName = airport.name && normalizeForSearch(airport.name).includes(query)
     const matchesCity = airport.municipality && normalizeForSearch(airport.municipality).includes(query)
     const matchesCountry = airport.iso_country && normalizeForSearch(airport.iso_country).includes(query)
@@ -89,14 +87,28 @@ const searchResults = computed(() => {
     }
   }
 
-  // Sort: exact IATA matches first, then by destination count
-  return results.sort((a, b) => {
-    const aExact = a.iata_code && normalizeForSearch(a.iata_code) === query
-    const bExact = b.iata_code && normalizeForSearch(b.iata_code) === query
-    if (aExact && !bExact) return -1
-    if (!aExact && bExact) return 1
-    return (b.destination_count || 0) - (a.destination_count || 0)
-  })
+  // Sort: exact IATA matches first, then partial IATA, then by destination count
+  return results
+    .sort((a, b) => {
+      const aIata = a.iata_code ? normalizeForSearch(a.iata_code) : ''
+      const bIata = b.iata_code ? normalizeForSearch(b.iata_code) : ''
+
+      // Exact IATA match gets highest priority
+      const aExact = aIata === query
+      const bExact = bIata === query
+      if (aExact && !bExact) return -1
+      if (!aExact && bExact) return 1
+
+      // Then partial IATA matches
+      const aPartialIata = aIata.includes(query)
+      const bPartialIata = bIata.includes(query)
+      if (aPartialIata && !bPartialIata) return -1
+      if (!aPartialIata && bPartialIata) return 1
+
+      // Finally by destination count
+      return (b.destination_count || 0) - (a.destination_count || 0)
+    })
+    .slice(0, 10)
 })
 
 </script>
@@ -182,17 +194,18 @@ const searchResults = computed(() => {
       <div class="flex gap-1.5 md:gap-2">
         <!-- Search -->
         <div class="relative">
+          <!-- Mobile: Full-width overlay search -->
           <Transition
             enter-active-class="transition-all duration-200 ease-out"
-            enter-from-class="w-10 md:w-12 opacity-50"
-            enter-to-class="w-64 opacity-100"
-            leave-active-class="transition-all duration-200 ease-in"
-            leave-from-class="w-64 opacity-100"
-            leave-to-class="w-10 md:w-12 opacity-50"
+            enter-from-class="opacity-0 scale-95"
+            enter-to-class="opacity-100 scale-100"
+            leave-active-class="transition-all duration-150 ease-in"
+            leave-from-class="opacity-100 scale-100"
+            leave-to-class="opacity-0 scale-95"
           >
             <div
               v-if="isSearchOpen"
-              class="map-card h-10 md:h-12 rounded-lg flex items-center gap-2 px-3 w-64"
+              class="fixed md:absolute inset-x-2 md:inset-x-auto top-2 md:top-auto md:right-0 map-card h-10 md:h-12 rounded-lg flex items-center gap-2 px-3 md:w-64 z-[1001]"
             >
               <Search class="w-4 h-4 text-muted-foreground shrink-0" />
               <input
@@ -200,11 +213,11 @@ const searchResults = computed(() => {
                 v-model="searchQuery"
                 type="text"
                 placeholder="Search airports..."
-                class="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                class="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground min-w-0"
                 @keydown.escape="closeSearch"
               />
               <button
-                class="p-1 hover:bg-muted rounded-full transition-colors"
+                class="p-1 hover:bg-muted rounded-full transition-colors shrink-0"
                 @click="closeSearch"
               >
                 <X class="w-4 h-4 text-muted-foreground" />
@@ -234,7 +247,7 @@ const searchResults = computed(() => {
           >
             <div
               v-if="isSearchOpen && searchResults.length > 0"
-              class="absolute top-full right-0 mt-2 w-72 map-card rounded-lg overflow-hidden shadow-xl"
+              class="fixed md:absolute inset-x-2 md:inset-x-auto top-14 md:top-full md:right-0 md:mt-2 md:w-72 map-card rounded-lg overflow-hidden shadow-xl z-[1001]"
             >
               <div class="max-h-[300px] overflow-y-auto">
                 <div

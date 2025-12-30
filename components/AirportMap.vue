@@ -28,11 +28,12 @@ function toggleMapStyle() {
 }
 
 // 1. Airport Data System
-const { 
-  activeAirports, 
-  airportsByIata, 
-  totalAirports, 
-  totalDestinations 
+const {
+  activeAirports,
+  airportsByIata,
+  allAirportsByIata,
+  totalAirports,
+  totalDestinations
 } = useAirportSystem()
 
 // 2. Saved Routes System
@@ -138,7 +139,7 @@ function onMarkerClick(airport: Airport) {
       :is-dark="isDark"
       :is-satellite="isSatellite"
       :saved-routes="savedRoutes"
-      :airports-by-iata="airportsByIata"
+      :airports-by-iata="allAirportsByIata"
       @toggle-color-mode="toggleColorMode"
       @toggle-map-style="toggleMapStyle"
       @load-route="handleLoadRoute"
