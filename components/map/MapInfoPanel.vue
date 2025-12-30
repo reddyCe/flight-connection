@@ -44,6 +44,9 @@ const sortLabel = computed(() => {
   }
 })
 
+// Use globalThis.Map to avoid conflicts with other Map types
+type AirportMap = globalThis.Map<string, Airport>
+
 const props = defineProps<{
   selectedAirport: Airport | null
   sequence: Airport[]
@@ -51,7 +54,7 @@ const props = defineProps<{
   isMinimized: boolean
   startDate: string
   kiwiLink: string
-  airportsByIata: Map<string, Airport>
+  airportsByIata: AirportMap
 }>()
 
 const emit = defineEmits<{

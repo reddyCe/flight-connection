@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import type { Map, CircleMarker, Polyline, TileLayer } from 'leaflet'
+import type { Map as LeafletMap, CircleMarker, Polyline, TileLayer } from 'leaflet'
 import 'leaflet.geodesic'
 import type { Airport } from '~/composables/useAirportSystem'
 
+// Use globalThis.Map to avoid conflicts with Leaflet's Map type
+type AirportMap = globalThis.Map<string, Airport>
+
 const props = defineProps<{
   activeAirports: Airport[]
-  airportsByIata: Map<string, Airport>
+  airportsByIata: AirportMap
   sequence: Airport[]
   isRouteFinalized: boolean
   isDark: boolean
@@ -24,11 +27,11 @@ defineExpose({
 const { $L } = useNuxtApp()
 
 const mapContainer = ref<HTMLElement | null>(null)
-const map = ref<Map | null>(null)
+const map = ref<LeafletMap | null>(null)
 const tileLayer = ref<TileLayer | null>(null)
 
 // Data & State
-const airportMarkers = ref<Map<string, CircleMarker[]>>(new Map()) // All markers created once (array for world copies)
+const airportMarkers = ref<globalThis.Map<string, CircleMarker[]>>(new Map()) // All markers created once (array for world copies)
 const visibleMarkers = ref<Set<string>>(new Set()) // Track what's currently on map to optimize diffs
 
 // Visual Elements

@@ -6,26 +6,90 @@ import {
   ChevronDown,
   Trash,
   Globe,
-  Map
+  Map,
+  Search,
+  X
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
 import type { SavedRoute } from '~/composables/useSavedRoutes'
+import type { Airport } from '~/composables/useAirportSystem'
 
-const props = defineProps<{
+// Use globalThis.Map to avoid conflicts with other Map types
+type AirportMap = globalThis.Map<string, Airport>
+
+interface Props {
   totalAirports: number
   totalDestinations: number
   isDark: boolean
   isSatellite: boolean
   savedRoutes: SavedRoute[]
-}>()
+  airportsByIata?: AirportMap
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  airportsByIata: undefined
+})
 
 const emit = defineEmits<{
   (e: 'toggleColorMode'): void
   (e: 'toggleMapStyle'): void
   (e: 'loadRoute', route: SavedRoute): void
   (e: 'deleteRoute', id: string): void
+  (e: 'selectAirport', airport: Airport): void
 }>()
+
+// Search state
+const isSearchOpen = ref(false)
+const searchQuery = ref('')
+const searchInputRef = ref<HTMLInputElement | null>(null)
+
+function openSearch() {
+  isSearchOpen.value = true
+  nextTick(() => {
+    searchInputRef.value?.focus()
+  })
+}
+
+function closeSearch() {
+  isSearchOpen.value = false
+  searchQuery.value = ''
+}
+
+function selectAirport(airport: Airport) {
+  emit('selectAirport', airport)
+  closeSearch()
+}
+
+const searchResults = computed(() => {
+  if (!searchQuery.value || searchQuery.value.length < 2 || !props.airportsByIata) return []
+
+  const query = searchQuery.value.toLowerCase()
+  const results: Airport[] = []
+  const maxResults = 10
+
+  for (const airport of props.airportsByIata.values()) {
+    if (results.length >= maxResults) break
+
+    const matchesIata = airport.iata_code?.toLowerCase().includes(query)
+    const matchesName = airport.name?.toLowerCase().includes(query)
+    const matchesCity = airport.municipality?.toLowerCase().includes(query)
+    const matchesCountry = airport.iso_country?.toLowerCase().includes(query)
+
+    if (matchesIata || matchesName || matchesCity || matchesCountry) {
+      results.push(airport)
+    }
+  }
+
+  // Sort: exact IATA matches first, then by destination count
+  return results.sort((a, b) => {
+    const aExact = a.iata_code?.toLowerCase() === query
+    const bExact = b.iata_code?.toLowerCase() === query
+    if (aExact && !bExact) return -1
+    if (!aExact && bExact) return 1
+    return (b.destination_count || 0) - (a.destination_count || 0)
+  })
+})
 
 </script>
 
@@ -108,6 +172,91 @@ const emit = defineEmits<{
 
       <!-- Map Style & Dark Mode Toggles -->
       <div class="flex gap-1.5 md:gap-2">
+        <!-- Search -->
+        <div class="relative">
+          <Transition
+            enter-active-class="transition-all duration-200 ease-out"
+            enter-from-class="w-10 md:w-12 opacity-50"
+            enter-to-class="w-64 opacity-100"
+            leave-active-class="transition-all duration-200 ease-in"
+            leave-from-class="w-64 opacity-100"
+            leave-to-class="w-10 md:w-12 opacity-50"
+          >
+            <div
+              v-if="isSearchOpen"
+              class="map-card h-10 md:h-12 rounded-lg flex items-center gap-2 px-3 w-64"
+            >
+              <Search class="w-4 h-4 text-muted-foreground shrink-0" />
+              <input
+                ref="searchInputRef"
+                v-model="searchQuery"
+                type="text"
+                placeholder="Search airports..."
+                class="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                @keydown.escape="closeSearch"
+              />
+              <button
+                class="p-1 hover:bg-muted rounded-full transition-colors"
+                @click="closeSearch"
+              >
+                <X class="w-4 h-4 text-muted-foreground" />
+              </button>
+            </div>
+          </Transition>
+
+          <Button
+            v-if="!isSearchOpen"
+            variant="outline"
+            size="icon"
+            class="map-card h-10 w-10 md:h-12 md:w-12 shrink-0 rounded-lg hover:bg-accent"
+            title="Search airports"
+            @click="openSearch"
+          >
+            <Search class="w-4 h-4 md:w-5 md:h-5" />
+          </Button>
+
+          <!-- Search Results Dropdown -->
+          <Transition
+            enter-active-class="transition-all duration-150 ease-out"
+            enter-from-class="opacity-0 -translate-y-2"
+            enter-to-class="opacity-100 translate-y-0"
+            leave-active-class="transition-all duration-100 ease-in"
+            leave-from-class="opacity-100 translate-y-0"
+            leave-to-class="opacity-0 -translate-y-2"
+          >
+            <div
+              v-if="isSearchOpen && searchResults.length > 0"
+              class="absolute top-full right-0 mt-2 w-72 map-card rounded-lg overflow-hidden shadow-xl"
+            >
+              <div class="max-h-[300px] overflow-y-auto">
+                <div
+                  v-for="airport in searchResults"
+                  :key="airport.iata_code"
+                  class="flex items-center gap-3 p-2 hover:bg-muted/50 cursor-pointer transition-colors border-b border-border/50 last:border-0"
+                  @click="selectAirport(airport)"
+                >
+                  <div class="shrink-0 w-5 h-3.5 rounded-[1px] overflow-hidden shadow-sm">
+                    <img
+                      v-if="airport.iso_country"
+                      :src="`https://flagcdn.com/w20/${airport.iso_country.toLowerCase()}.png`"
+                      class="w-full h-full object-cover"
+                      :alt="airport.iso_country"
+                    />
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2">
+                      <span class="text-xs font-bold font-mono text-primary">{{ airport.iata_code }}</span>
+                      <span class="text-xs text-muted-foreground truncate">{{ airport.municipality }}</span>
+                    </div>
+                    <span class="text-[10px] text-muted-foreground truncate block">{{ airport.name }}</span>
+                  </div>
+                  <span class="text-[10px] text-muted-foreground shrink-0">{{ airport.destination_count }} routes</span>
+                </div>
+              </div>
+            </div>
+          </Transition>
+        </div>
+
         <Button
           variant="outline"
           size="icon"

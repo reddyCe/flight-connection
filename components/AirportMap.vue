@@ -92,6 +92,14 @@ function handleFinalizeRoute() {
   })
 }
 
+// Handle selecting an airport from search
+function handleSelectAirport(airport: Airport) {
+  // Reset any existing sequence and start fresh with this airport
+  resetSequence()
+  selectedAirport.value = airport
+  addToSequence(airport)
+}
+
 // Handle marker click logic (similar to original but using composable actions)
 function onMarkerClick(airport: Airport) {
   if (isRouteFinalized.value) return
@@ -130,10 +138,12 @@ function onMarkerClick(airport: Airport) {
       :is-dark="isDark"
       :is-satellite="isSatellite"
       :saved-routes="savedRoutes"
+      :airports-by-iata="airportsByIata"
       @toggle-color-mode="toggleColorMode"
       @toggle-map-style="toggleMapStyle"
       @load-route="handleLoadRoute"
       @delete-route="deleteRoute"
+      @select-airport="handleSelectAirport"
     />
 
     <!-- Map Container -->
