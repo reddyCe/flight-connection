@@ -9,13 +9,40 @@ import {
   ChevronUp,
   ChevronDown,
   RotateCcw,
-  Calendar as CalendarIcon
+  Calendar as CalendarIcon,
+  ArrowUpDown
 } from 'lucide-vue-next'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
 import { Calendar } from '@/components/ui/calendar'
 import type { Airport } from '~/composables/useAirportSystem'
+import ClimateDialog from './ClimateDialog.vue'
+
+const climateDialogOpen = ref(false)
+const climateAirport = ref<Airport | null>(null)
+
+function openClimateDialog(airport: Airport) {
+  climateAirport.value = airport
+  climateDialogOpen.value = true
+}
+
+type SortOption = 'default' | 'country' | 'city'
+const sortBy = ref<SortOption>('default')
+
+function cycleSortOption() {
+  const options: SortOption[] = ['default', 'country', 'city']
+  const currentIndex = options.indexOf(sortBy.value)
+  sortBy.value = options[(currentIndex + 1) % options.length]
+}
+
+const sortLabel = computed(() => {
+  switch (sortBy.value) {
+    case 'country': return 'Country'
+    case 'city': return 'City'
+    default: return 'Default'
+  }
+})
 
 const props = defineProps<{
   selectedAirport: Airport | null
@@ -37,6 +64,33 @@ const emit = defineEmits<{
   (e: 'finalizeRoute'): void
   (e: 'update:startDate', val: any): void
 }>()
+
+const sortedDestinations = computed(() => {
+  if (!props.selectedAirport?.destinations) return []
+
+  const dests = [...props.selectedAirport.destinations]
+
+  switch (sortBy.value) {
+    case 'country':
+      return dests.sort((a, b) => {
+        const countryA = props.airportsByIata.get(a)?.iso_country || 'ZZZ'
+        const countryB = props.airportsByIata.get(b)?.iso_country || 'ZZZ'
+        if (countryA !== countryB) return countryA.localeCompare(countryB)
+        // Secondary sort by city within same country
+        const cityA = props.airportsByIata.get(a)?.municipality || ''
+        const cityB = props.airportsByIata.get(b)?.municipality || ''
+        return cityA.localeCompare(cityB)
+      })
+    case 'city':
+      return dests.sort((a, b) => {
+        const cityA = props.airportsByIata.get(a)?.municipality || props.airportsByIata.get(a)?.name || ''
+        const cityB = props.airportsByIata.get(b)?.municipality || props.airportsByIata.get(b)?.name || ''
+        return cityA.localeCompare(cityB)
+      })
+    default:
+      return dests
+  }
+})
 
 </script>
 
@@ -95,16 +149,14 @@ const emit = defineEmits<{
                 </div>
                 
                 <div class="flex items-center gap-2 shrink-0">
-                  <a 
-                    v-if="stop.municipality"
-                    :href="`https://en.wikipedia.org/wiki/${stop.municipality}#Climate`"
-                    target="_blank"
+                  <button
+                    v-if="stop.latitude_deg && stop.longitude_deg"
                     class="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity p-1.5 hover:bg-background/80 rounded-full text-muted-foreground hover:text-amber-500"
-                    @click.stop
+                    @click.stop="openClimateDialog(stop)"
                     title="View Climate"
                   >
                     <CloudSun class="w-3.5 h-3.5" />
-                  </a>
+                  </button>
                   <Badge variant="outline" class="font-mono text-[10px] font-bold px-1.5 py-0 h-5">
                     {{ stop.iata_code }}
                   </Badge>
@@ -198,21 +250,41 @@ const emit = defineEmits<{
                    {{ selectedAirport.municipality }}, {{ selectedAirport.iso_country }}
                  </div>
               </div>
-              <Button variant="ghost" size="icon" class="h-6 w-6 -mr-2 -mt-2" title="Minimize" @click="emit('minimizePanel')">
-                <ChevronDown class="w-3 h-3" />
-              </Button>
+              <div class="flex items-center gap-1 -mr-2 -mt-2">
+                <button
+                  v-if="selectedAirport.latitude_deg && selectedAirport.longitude_deg"
+                  class="p-1.5 hover:bg-background/80 rounded-full text-muted-foreground hover:text-amber-500 transition-colors"
+                  @click="openClimateDialog(selectedAirport)"
+                  title="View Climate"
+                >
+                  <CloudSun class="w-4 h-4" />
+                </button>
+                <Button variant="ghost" size="icon" class="h-6 w-6" title="Minimize" @click="emit('minimizePanel')">
+                  <ChevronDown class="w-3 h-3" />
+                </Button>
+              </div>
             </div>
 
-            <!-- Destinatinos List -->
+            <!-- Destinations List -->
             <div class="flex-1 overflow-hidden flex flex-col">
               <div class="px-4 py-2 bg-background/50 border-b border-border flex items-center justify-between">
                 <span class="text-xs font-bold uppercase">Direct Connections</span>
-                <Badge variant="secondary" class="text-[10px]">{{ selectedAirport.destination_count }}</Badge>
+                <div class="flex items-center gap-2">
+                  <button
+                    class="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors px-1.5 py-0.5 rounded hover:bg-muted"
+                    @click="cycleSortOption"
+                    title="Change sort order"
+                  >
+                    <ArrowUpDown class="w-3 h-3" />
+                    {{ sortLabel }}
+                  </button>
+                  <Badge variant="secondary" class="text-[10px]">{{ selectedAirport.destination_count }}</Badge>
+                </div>
               </div>
               
               <div class="flex-1 min-h-0 overflow-y-auto p-2 space-y-1">
-                <div 
-                  v-for="dest in selectedAirport.destinations" 
+                <div
+                  v-for="dest in sortedDestinations" 
                   :key="dest"
                   class="group flex items-center justify-between p-2 rounded hover:bg-accent/50 transition-colors cursor-pointer border border-transparent hover:border-border/50"
                   @click="airportsByIata.get(dest) && emit('addToSequence', airportsByIata.get(dest)!)"
@@ -244,16 +316,14 @@ const emit = defineEmits<{
 
                   <!-- Right: Weather + IATA Code -->
                   <div class="flex items-center gap-2 shrink-0">
-                    <a 
-                      v-if="airportsByIata.get(dest)?.municipality"
-                      :href="`https://en.wikipedia.org/wiki/${airportsByIata.get(dest)!.municipality}#Climate`"
-                      target="_blank"
+                    <button
+                      v-if="airportsByIata.get(dest)?.latitude_deg && airportsByIata.get(dest)?.longitude_deg"
                       class="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity p-1.5 hover:bg-background/80 rounded-full text-muted-foreground hover:text-amber-500"
-                      @click.stop
+                      @click.stop="openClimateDialog(airportsByIata.get(dest)!)"
                       title="View Climate"
                     >
                       <CloudSun class="w-3.5 h-3.5" />
-                    </a>
+                    </button>
                     
                     <Badge variant="outline" class="font-mono text-[10px] font-bold px-1.5 py-0 h-5 bg-background text-muted-foreground group-hover:text-primary group-hover:border-primary/30 transition-colors">
                       {{ dest }}
@@ -336,6 +406,11 @@ const emit = defineEmits<{
         </div>
       </div>
     </Transition>
+
+    <ClimateDialog
+      :airport="climateAirport"
+      v-model:open="climateDialogOpen"
+    />
 </template>
 
 <style scoped>
