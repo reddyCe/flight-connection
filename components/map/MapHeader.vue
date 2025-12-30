@@ -61,20 +61,28 @@ function selectAirport(airport: Airport) {
   closeSearch()
 }
 
+// Normalize string for search: lowercase and remove diacritics/accents
+function normalizeForSearch(str: string): string {
+  return str
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove diacritical marks
+}
+
 const searchResults = computed(() => {
   if (!searchQuery.value || searchQuery.value.length < 2 || !props.airportsByIata) return []
 
-  const query = searchQuery.value.toLowerCase()
+  const query = normalizeForSearch(searchQuery.value)
   const results: Airport[] = []
   const maxResults = 10
 
   for (const airport of props.airportsByIata.values()) {
     if (results.length >= maxResults) break
 
-    const matchesIata = airport.iata_code?.toLowerCase().includes(query)
-    const matchesName = airport.name?.toLowerCase().includes(query)
-    const matchesCity = airport.municipality?.toLowerCase().includes(query)
-    const matchesCountry = airport.iso_country?.toLowerCase().includes(query)
+    const matchesIata = airport.iata_code && normalizeForSearch(airport.iata_code).includes(query)
+    const matchesName = airport.name && normalizeForSearch(airport.name).includes(query)
+    const matchesCity = airport.municipality && normalizeForSearch(airport.municipality).includes(query)
+    const matchesCountry = airport.iso_country && normalizeForSearch(airport.iso_country).includes(query)
 
     if (matchesIata || matchesName || matchesCity || matchesCountry) {
       results.push(airport)
@@ -83,8 +91,8 @@ const searchResults = computed(() => {
 
   // Sort: exact IATA matches first, then by destination count
   return results.sort((a, b) => {
-    const aExact = a.iata_code?.toLowerCase() === query
-    const bExact = b.iata_code?.toLowerCase() === query
+    const aExact = a.iata_code && normalizeForSearch(a.iata_code) === query
+    const bExact = b.iata_code && normalizeForSearch(b.iata_code) === query
     if (aExact && !bExact) return -1
     if (!aExact && bExact) return 1
     return (b.destination_count || 0) - (a.destination_count || 0)
