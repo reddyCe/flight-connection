@@ -83,6 +83,15 @@ function handleLoadRoute(route: Parameters<typeof loadSavedRoute>[0]) {
   })
 }
 
+// Handle finalizing route and centering the map on it
+function handleFinalizeRoute() {
+  finalizeRoute()
+  // Center map on the finalized route after a tick for state to update
+  nextTick(() => {
+    mapContainerRef.value?.fitToSequence()
+  })
+}
+
 // Handle marker click logic (similar to original but using composable actions)
 function onMarkerClick(airport: Airport) {
   if (isRouteFinalized.value) return
@@ -154,7 +163,7 @@ function onMarkerClick(airport: Airport) {
       @edit-route="isRouteFinalized = false"
       @save-route="handleSaveRoute"
       @add-to-sequence="addToSequence"
-      @finalize-route="finalizeRoute"
+      @finalize-route="handleFinalizeRoute"
       @update:start-date="startDateValue = $event"
     />
 
