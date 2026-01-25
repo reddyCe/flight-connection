@@ -3,6 +3,7 @@ export interface MonthlyClimate {
   avgHigh: number
   avgLow: number
   rainfall: number
+  rainyDays: number
 }
 
 interface OpenMeteoResponse {
@@ -27,8 +28,8 @@ function getCacheKey(lat: number, lng: number): string {
 }
 
 function computeMonthlyAverages(data: OpenMeteoResponse): MonthlyClimate[] {
-  const monthlyData: { highs: number[]; lows: number[]; rain: number[] }[] =
-    Array.from({ length: 12 }, () => ({ highs: [], lows: [], rain: [] }))
+  const monthlyData: { highs: number[]; lows: number[]; rain: number[]; rainyDays: number; totalDays: number }[] =
+    Array.from({ length: 12 }, () => ({ highs: [], lows: [], rain: [], rainyDays: 0, totalDays: 0 }))
 
   const { time, temperature_2m_max, temperature_2m_min, precipitation_sum } = data.daily
 
@@ -43,8 +44,16 @@ function computeMonthlyAverages(data: OpenMeteoResponse): MonthlyClimate[] {
     }
     if (precipitation_sum[i] !== null) {
       monthlyData[month].rain.push(precipitation_sum[i]!)
+      monthlyData[month].totalDays++
+      // Count as rainy day if precipitation >= 2.5mm (IMD standard for meaningful rain)
+      if (precipitation_sum[i]! >= 2.5) {
+        monthlyData[month].rainyDays++
+      }
     }
   }
+
+  // Number of years of data (for averaging rainy days)
+  const years = 5
 
   return monthlyData.map((data, idx) => {
     const avgHigh = data.highs.length > 0
@@ -56,12 +65,14 @@ function computeMonthlyAverages(data: OpenMeteoResponse): MonthlyClimate[] {
     const avgRainfall = data.rain.length > 0
       ? (data.rain.reduce((a, b) => a + b, 0) / data.rain.length) * 30 // Avg daily * 30 for monthly
       : 0
+    const avgRainyDays = Math.round(data.rainyDays / years)
 
     return {
       month: MONTH_NAMES[idx],
       avgHigh: Math.round(avgHigh * 10) / 10,
       avgLow: Math.round(avgLow * 10) / 10,
-      rainfall: Math.round(avgRainfall)
+      rainfall: Math.round(avgRainfall),
+      rainyDays: avgRainyDays
     }
   })
 }

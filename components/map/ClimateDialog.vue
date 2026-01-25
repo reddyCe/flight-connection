@@ -88,11 +88,13 @@ const stats = computed(() => {
   const highs = climateData.value.map(m => m.avgHigh)
   const lows = climateData.value.map(m => m.avgLow)
   const rains = climateData.value.map(m => m.rainfall)
+  const rainyDays = climateData.value.map(m => m.rainyDays)
 
   return {
     maxHigh: Math.max(...highs),
     minLow: Math.min(...lows),
     totalRain: Math.round(rains.reduce((a, b) => a + b, 0)),
+    totalRainyDays: rainyDays.reduce((a, b) => a + b, 0),
     avgTemp: Math.round((highs.reduce((a, b) => a + b, 0) / 12 + lows.reduce((a, b) => a + b, 0) / 12) / 2)
   }
 })
@@ -128,7 +130,7 @@ const stats = computed(() => {
       <!-- Climate Data -->
       <div v-else-if="climateData && stats" class="flex flex-col overflow-hidden">
         <!-- Summary Stats -->
-        <div class="grid grid-cols-3 gap-2 p-4 bg-background border-b border-border">
+        <div class="grid grid-cols-4 gap-2 p-4 bg-background border-b border-border">
           <div class="flex flex-col items-center p-2 rounded-lg bg-gradient-to-br from-orange-500/10 to-red-500/10 border border-orange-500/20">
             <span class="text-[10px] uppercase text-muted-foreground font-bold">Warmest</span>
             <span class="text-xl font-black text-orange-500">{{ stats.maxHigh }}&deg;</span>
@@ -140,6 +142,10 @@ const stats = computed(() => {
           <div class="flex flex-col items-center p-2 rounded-lg bg-gradient-to-br from-sky-500/10 to-indigo-500/10 border border-sky-500/20">
             <span class="text-[10px] uppercase text-muted-foreground font-bold">Yearly Rain</span>
             <span class="text-xl font-black text-sky-500">{{ stats.totalRain }}<span class="text-xs">mm</span></span>
+          </div>
+          <div class="flex flex-col items-center p-2 rounded-lg bg-gradient-to-br from-violet-500/10 to-purple-500/10 border border-violet-500/20">
+            <span class="text-[10px] uppercase text-muted-foreground font-bold">Rainy Days</span>
+            <span class="text-xl font-black text-violet-500">{{ stats.totalRainyDays }}<span class="text-xs">/yr</span></span>
           </div>
         </div>
 
@@ -180,11 +186,11 @@ const stats = computed(() => {
               </div>
             </div>
 
-            <!-- Rainfall Section -->
+            <!-- Rainfall & Rainy Days Section -->
             <div>
               <div class="flex items-center gap-2 mb-3">
                 <Droplets class="w-4 h-4 text-sky-500" />
-                <span class="text-xs font-bold uppercase text-muted-foreground">Monthly Rainfall</span>
+                <span class="text-xs font-bold uppercase text-muted-foreground">Rainfall & Rainy Days</span>
               </div>
               <div class="space-y-2">
                 <div
@@ -201,9 +207,14 @@ const stats = computed(() => {
                       :style="{ width: Math.max(2, rainToPercent(month.rainfall)) + '%' }"
                     />
                   </div>
-                  <span class="text-xs font-mono text-sky-500 w-14 text-right shrink-0">
-                    {{ month.rainfall }}mm
-                  </span>
+                  <div class="flex flex-col items-end shrink-0 w-16">
+                    <span class="text-xs font-mono text-sky-500 leading-tight">
+                      {{ month.rainfall }}mm
+                    </span>
+                    <span class="text-[10px] font-mono text-violet-500 leading-tight">
+                      {{ month.rainyDays }}d
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
