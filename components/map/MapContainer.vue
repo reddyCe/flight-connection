@@ -2,6 +2,7 @@
 import type { Map as LeafletMap, CircleMarker, Polyline, TileLayer } from 'leaflet'
 import 'leaflet.geodesic'
 import type { Airport } from '~/composables/useAirportSystem'
+import { useRouteMeta, formatDistance, formatDuration, formatCarriers } from '~/composables/useRouteMeta'
 
 // Use globalThis.Map to avoid conflicts with Leaflet's Map type
 type AirportMap = globalThis.Map<string, Airport>
@@ -25,6 +26,18 @@ defineExpose({
 })
 
 const { $L } = useNuxtApp()
+const { routeMeta, getRoute } = useRouteMeta()
+
+// Route meta loads lazily; redraw so already-drawn legs pick up their tooltips
+watch(routeMeta, () => updateMapState())
+
+function routeTooltipHtml(from: Airport, to: Airport): string | null {
+  const meta = getRoute(from.iata_code, to.iata_code)
+  if (!meta) return null
+  const stats = [formatDistance(meta.km), formatDuration(meta.min), formatCarriers(meta.carriers)]
+    .filter(Boolean).join(' · ')
+  return `<b>${from.iata_code} → ${to.iata_code}</b><br>${stats}`
+}
 
 const mapContainer = ref<HTMLElement | null>(null)
 const map = ref<LeafletMap | null>(null)
@@ -170,6 +183,10 @@ function updateMapState() {
           end.latitude_deg, end.longitude_deg,
           { weight: 3, opacity: 1, color: '#3b82f6', steps: 50 }
         )
+        const tooltip = routeTooltipHtml(start, end)
+        if (tooltip) {
+          lines.forEach(line => line.bindTooltip(tooltip, { sticky: true, className: 'airport-tooltip' }))
+        }
         sequenceLines.value.push(...lines)
       }
     }

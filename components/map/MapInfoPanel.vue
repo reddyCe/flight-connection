@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
 import { Calendar } from '@/components/ui/calendar'
 import type { Airport } from '~/composables/useAirportSystem'
+import { useRouteMeta, formatDistance, formatDuration, formatCarriers } from '~/composables/useRouteMeta'
 import ClimateDialog from './ClimateDialog.vue'
 
 const climateDialogOpen = ref(false)
@@ -27,17 +28,20 @@ function openClimateDialog(airport: Airport) {
   climateDialogOpen.value = true
 }
 
-type SortOption = 'default' | 'country' | 'city'
+const { getRoute } = useRouteMeta()
+
+type SortOption = 'default' | 'distance' | 'country' | 'city'
 const sortBy = ref<SortOption>('default')
 
 function cycleSortOption() {
-  const options: SortOption[] = ['default', 'country', 'city']
+  const options: SortOption[] = ['default', 'distance', 'country', 'city']
   const currentIndex = options.indexOf(sortBy.value)
   sortBy.value = options[(currentIndex + 1) % options.length]
 }
 
 const sortLabel = computed(() => {
   switch (sortBy.value) {
+    case 'distance': return 'Distance'
     case 'country': return 'Country'
     case 'city': return 'City'
     default: return 'Default'
@@ -68,12 +72,33 @@ const emit = defineEmits<{
   (e: 'update:startDate', val: any): void
 }>()
 
+// Per-leg route metadata for the trip summary (leg i = sequence[i] -> sequence[i+1])
+const tripLegs = computed(() =>
+  props.sequence.slice(1).map((stop, i) =>
+    getRoute(props.sequence[i].iata_code, stop.iata_code)
+  )
+)
+
+const tripTotals = computed(() => {
+  if (!tripLegs.value.some(leg => leg?.km != null)) return null
+  return {
+    km: tripLegs.value.reduce((sum, leg) => sum + (leg?.km ?? 0), 0),
+    min: tripLegs.value.reduce((sum, leg) => sum + (leg?.min ?? 0), 0)
+  }
+})
+
 const sortedDestinations = computed(() => {
   if (!props.selectedAirport?.destinations) return []
 
   const dests = [...props.selectedAirport.destinations]
 
   switch (sortBy.value) {
+    case 'distance':
+      return dests.sort((a, b) => {
+        const kmA = getRoute(props.selectedAirport?.iata_code, a)?.km ?? Infinity
+        const kmB = getRoute(props.selectedAirport?.iata_code, b)?.km ?? Infinity
+        return kmA - kmB
+      })
     case 'country':
       return dests.sort((a, b) => {
         const countryA = props.airportsByIata.get(a)?.iso_country || 'ZZZ'
@@ -125,9 +150,22 @@ const sortedDestinations = computed(() => {
             </div>
 
             <div class="flex-1 overflow-y-auto p-2 space-y-1">
-              <div 
-                v-for="(stop, idx) in sequence" 
-                :key="stop.iata_code"
+              <template v-for="(stop, idx) in sequence" :key="stop.iata_code">
+              <div
+                v-if="idx > 0 && tripLegs[idx - 1]"
+                class="flex items-center gap-1.5 pl-9 py-0.5 text-[9px] text-muted-foreground/80"
+                :title="tripLegs[idx - 1]?.carriers.join(', ')"
+              >
+                <Plane class="w-2.5 h-2.5 rotate-90 shrink-0" />
+                <span class="truncate">
+                  {{ [
+                    formatDistance(tripLegs[idx - 1]?.km),
+                    formatDuration(tripLegs[idx - 1]?.min),
+                    formatCarriers(tripLegs[idx - 1]?.carriers)
+                  ].filter(Boolean).join(' · ') }}
+                </span>
+              </div>
+              <div
                 class="group flex items-center gap-3 p-2 rounded border border-border/50 bg-background/50 transition-colors"
               >
                 <div class="shrink-0 w-6 h-6 rounded-full bg-muted flex items-center justify-center text-[10px] font-black border border-border">
@@ -165,9 +203,16 @@ const sortedDestinations = computed(() => {
                   </Badge>
                 </div>
               </div>
+              </template>
             </div>
 
             <div class="p-3 border-t border-border bg-muted/10 flex flex-col gap-2">
+               <div v-if="tripTotals" class="flex items-center justify-between px-1 text-[11px]">
+                 <span class="font-bold uppercase text-muted-foreground">Total</span>
+                 <span class="font-mono font-bold">
+                   {{ formatDistance(tripTotals.km) }} · ~{{ formatDuration(tripTotals.min) }} in air
+                 </span>
+               </div>
                <div class="grid grid-cols-3 gap-2">
                  <Button
                     variant="outline"
@@ -313,6 +358,17 @@ const sortedDestinations = computed(() => {
                       </span>
                       <span v-else class="text-[10px] text-muted-foreground leading-tight truncate">
                          {{ airportsByIata.get(dest)?.name }}
+                      </span>
+                      <span
+                        v-if="getRoute(selectedAirport?.iata_code, dest)"
+                        class="text-[9px] text-muted-foreground/80 leading-tight truncate"
+                        :title="getRoute(selectedAirport?.iata_code, dest)?.carriers.join(', ')"
+                      >
+                        {{ [
+                          formatDistance(getRoute(selectedAirport?.iata_code, dest)?.km),
+                          formatDuration(getRoute(selectedAirport?.iata_code, dest)?.min),
+                          formatCarriers(getRoute(selectedAirport?.iata_code, dest)?.carriers)
+                        ].filter(Boolean).join(' · ') }}
                       </span>
                     </div>
                   </div>
