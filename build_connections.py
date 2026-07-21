@@ -67,7 +67,9 @@ def build_metadata_index(df: pd.DataFrame) -> dict:
         )
 
     index = {}
-    df = df.where(pd.notna(df), None)
+    # astype(object) first, or .where() silently keeps NaN in float columns —
+    # and json.dump writes NaN literals that browsers' JSON.parse rejects
+    df = df.astype(object).where(pd.notna(df), None)
     for row in df.to_dict('records'):
         iata = row.get('iata_code')
         if not iata or not isinstance(iata, str) or len(iata.strip()) != 3:
@@ -93,9 +95,12 @@ def symmetrize(dest_map: dict) -> int:
 
 def _num(value, cast) -> Optional[float]:
     try:
-        return cast(value) if value is not None else None
+        result = cast(value) if value is not None else None
     except (ValueError, TypeError):
         return None
+    if result is not None and result != result:  # NaN guard
+        return None
+    return result
 
 
 def filter_unplottable(routes: dict, meta_index: dict) -> dict:
@@ -220,13 +225,15 @@ def main():
     out = Path(args.output)
     out.parent.mkdir(parents=True, exist_ok=True)
     with open(out, 'w', encoding='utf-8') as f:
-        json.dump(records, f, ensure_ascii=False)
+        # allow_nan=False: NaN literals are invalid JSON — browsers reject them
+        json.dump(records, f, ensure_ascii=False, allow_nan=False)
     logger.info(f"Saved: {out}")
 
     meta_out = Path(args.meta_output)
     meta_out.parent.mkdir(parents=True, exist_ok=True)
     with open(meta_out, 'w', encoding='utf-8') as f:
-        json.dump(build_route_meta(routes), f, ensure_ascii=False, separators=(',', ':'))
+        json.dump(build_route_meta(routes), f, ensure_ascii=False, separators=(',', ':'),
+                  allow_nan=False)
     logger.info(f"Saved: {meta_out}")
 
     print_stats(records)
