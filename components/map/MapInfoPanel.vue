@@ -324,7 +324,7 @@ const sortedDestinations = computed(() => {
               <div>
                  <div class="flex items-center gap-2 mb-1">
                    <Badge variant="outline" class="bg-background">{{ selectedAirport.iata_code }}</Badge>
-                   <span class="text-[10px] uppercase font-bold text-muted-foreground">{{ selectedAirport.type.replace('_', ' ') }}</span>
+                   <span class="text-[10px] uppercase font-bold text-muted-foreground">{{ (selectedAirport.type || 'airport').replace('_', ' ') }}</span>
                  </div>
                  <h3 class="font-heading font-black text-lg leading-tight">{{ selectedAirport.name }}</h3>
                  <div class="flex items-center gap-1.5 mt-1 text-xs text-muted-foreground">

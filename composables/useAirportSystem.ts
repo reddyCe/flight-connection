@@ -1,19 +1,21 @@
 import { ref, computed, watch } from 'vue'
 
+// Airports sourced from the route dataset but missing from OurAirports
+// have null metadata fields (~45 records) — guard before calling methods
 export interface Airport {
-  id: number
-  ident: string
-  type: string
+  id: number | null
+  ident: string | null
+  type: string | null
   name: string
   latitude_deg: number | null
   longitude_deg: number | null
   elevation_ft: number | null
-  continent: string
+  continent: string | null
   iso_country: string
-  iso_region: string
+  iso_region: string | null
   municipality: string
-  scheduled_service: string
-  gps_code: string
+  scheduled_service: string | null
+  gps_code: string | null
   iata_code: string | null
   local_code: string | null
   home_link: string | null
