@@ -10,7 +10,10 @@ import {
   ChevronDown,
   RotateCcw,
   Calendar as CalendarIcon,
-  ArrowUpDown
+  ArrowUpDown,
+  Minus,
+  Plus,
+  Search as SearchIcon
 } from 'lucide-vue-next'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -57,7 +60,9 @@ const props = defineProps<{
   isRouteFinalized: boolean
   isMinimized: boolean
   startDate: string
-  kiwiLink: string
+  kayakLink: string
+  googleFlightsLink: string
+  stayNights: number
   airportsByIata: AirportMap
 }>()
 
@@ -70,6 +75,7 @@ const emit = defineEmits<{
   (e: 'addToSequence', airport: Airport): void
   (e: 'finalizeRoute'): void
   (e: 'update:startDate', val: any): void
+  (e: 'update:stayNights', val: number): void
 }>()
 
 // Per-leg route metadata for the trip summary (leg i = sequence[i] -> sequence[i+1])
@@ -133,7 +139,7 @@ const sortedDestinations = computed(() => {
     >
       <div
         v-if="selectedAirport || isRouteFinalized"
-        class="absolute bottom-0 left-0 right-0 md:bottom-6 md:left-6 md:right-auto z-[1000] w-full md:w-80 md:max-w-[calc(100vw-3rem)] pointer-events-auto"
+        class="absolute bottom-0 left-0 right-0 md:bottom-6 md:left-6 md:right-auto z-[1000] w-full md:w-[26rem] md:max-w-[calc(100vw-3rem)] pointer-events-auto"
       >
         <div class="map-card flex flex-col rounded-t-xl md:rounded-lg">
           
@@ -242,7 +248,7 @@ const sortedDestinations = computed(() => {
                  </Button>
                </div>
 
-               <!-- Date Picker + Search -->
+               <!-- Departure date + nights per stop -->
                <div class="flex items-center gap-2">
                  <Popover>
                    <PopoverTrigger as-child>
@@ -259,19 +265,53 @@ const sortedDestinations = computed(() => {
                    </PopoverContent>
                  </Popover>
 
+                 <div
+                   class="flex items-center gap-1 px-2 py-1.5 bg-muted/50 rounded-md border border-border/50 flex-1 justify-between"
+                   title="Nights spent at each stop — spaces out the flight dates"
+                 >
+                   <button
+                     class="p-1 rounded hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
+                     :disabled="stayNights <= 1"
+                     @click="emit('update:stayNights', stayNights - 1)"
+                   >
+                     <Minus class="w-3 h-3" />
+                   </button>
+                   <span class="text-xs font-medium whitespace-nowrap">
+                     <span class="font-mono font-bold">{{ stayNights }}</span>
+                     {{ stayNights === 1 ? 'night' : 'nights' }} / stop
+                   </span>
+                   <button
+                     class="p-1 rounded hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
+                     :disabled="stayNights >= 30"
+                     @click="emit('update:stayNights', stayNights + 1)"
+                   >
+                     <Plus class="w-3 h-3" />
+                   </button>
+                 </div>
+               </div>
+
+               <!-- Flight search links -->
+               <div class="grid grid-cols-2 gap-2">
                  <Button
                     variant="default"
                     size="sm"
-                    class="flex-1 text-xs gap-2 bg-[#00a991] hover:bg-[#008f7a] text-white border-0"
+                    class="w-full text-xs gap-1.5 bg-[#ff690f] hover:bg-[#e55d0c] text-white border-0"
                     as-child
                   >
-                    <a :href="kiwiLink" target="_blank" rel="noopener noreferrer">
-                      <img
-                        src="https://play-lh.googleusercontent.com/SlMA_aZk2-2Q_c9K1NU1ZRvIXUFvs5fe2EDTuntNK4D8qPHRLNbncRh0jJGCAmCdMQ"
-                        class="w-4 h-4 rounded-full bg-white p-0.5"
-                        alt="Kiwi"
-                      />
-                      Search Flights
+                    <a :href="kayakLink" target="_blank" rel="noopener noreferrer">
+                      <SearchIcon class="w-3.5 h-3.5" />
+                      Kayak
+                    </a>
+                 </Button>
+                 <Button
+                    variant="default"
+                    size="sm"
+                    class="w-full text-xs gap-1.5 bg-[#1a73e8] hover:bg-[#1765cc] text-white border-0"
+                    as-child
+                  >
+                    <a :href="googleFlightsLink" target="_blank" rel="noopener noreferrer">
+                      <SearchIcon class="w-3.5 h-3.5" />
+                      Google Flights
                     </a>
                  </Button>
                </div>

@@ -1,0 +1,40 @@
+# Weekly route-data refresh.
+# The upstream dataset (Jonty/airline-route-data) is regenerated weekly,
+# so we rebuild public/airports_data.json + routes_meta.json on the same
+# cadence, commit if anything changed, and kick off the Pages deploy
+# (pushes made with GITHUB_TOKEN don't fire `push` workflows on their own).
+name: Refresh route data
+
+on:
+  schedule:
+    - cron: "17 4 * * 2" # Tuesdays 04:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests pandas
+      - run: python build_connections.py
+      - name: Commit and deploy if data changed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git diff --quiet public/; then
+            echo "No data changes this week."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add public/airports_data.json public/routes_meta.json
+          git commit -m "chore: weekly route data refresh"
+          git push
+          gh workflow run deploy.yml --ref main

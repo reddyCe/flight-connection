@@ -50,7 +50,9 @@ const {
   isRouteFinalized,
   startDateValue,
   startDate,
-  kiwiLink,
+  stayNights,
+  kayakLink,
+  googleFlightsLink,
   resetSequence,
   finalizeRoute,
   addToSequence,
@@ -166,7 +168,9 @@ function onMarkerClick(airport: Airport) {
       :is-route-finalized="isRouteFinalized"
       :is-minimized="isPanelMinimized"
       :start-date="startDate"
-      :kiwi-link="kiwiLink"
+      :kayak-link="kayakLink"
+      :google-flights-link="googleFlightsLink"
+      v-model:stay-nights="stayNights"
       :airports-by-iata="airportsByIata"
       @minimize-panel="isPanelMinimized = true"
       @expand-panel="isPanelMinimized = false"

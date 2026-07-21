@@ -3,6 +3,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { today, getLocalTimeZone } from '@internationalized/date'
 import type { Airport } from './useAirportSystem'
 import type { SavedRoute } from './useSavedRoutes'
+import { googleFlightsUrl } from '~/utils/googleFlights'
 
 export function useFlightPlanning(airportsByIata: Ref<Map<string, Airport>>) {
   const router = useRouter()
@@ -17,29 +18,35 @@ export function useFlightPlanning(airportsByIata: Ref<Map<string, Airport>>) {
   const startDateValue = ref(today(getLocalTimeZone()))
   const startDate = computed(() => startDateValue.value.toString())
 
-  // Kiwi Link Generation
-  const kiwiLink = computed(() => {
-    if (sequence.value.length < 2) return '#'
-    
-    const getSlug = (a: Airport) => a.iata_code
-    const originSlug = getSlug(sequence.value[0])
+  // Nights spent at each stop, used to space the multi-city legs
+  const stayNights = ref(3)
 
-    const start = new Date(startDate.value)
-    const end = new Date(start)
-    end.setDate(start.getDate() + 30)
-    
+  // Leg i departs sequence[i] -> sequence[i+1] after i stays
+  const legs = computed(() => {
+    if (sequence.value.length < 2) return []
+
     const formatDate = (d: Date) => d.toISOString().split('T')[0]
-    const dateRange = `${formatDate(start)}_${formatDate(end)}`
+    return sequence.value.slice(0, -1).map((from, i) => {
+      const date = new Date(startDate.value)
+      date.setDate(date.getDate() + i * stayNights.value)
+      return {
+        date: formatDate(date),
+        from: from.iata_code!,
+        to: sequence.value[i + 1].iata_code!
+      }
+    })
+  })
 
-    let url = `https://www.kiwi.com/en/nomad/results/${originSlug}~${dateRange}~--`
-    url += `/${originSlug}~--~7-20`
-    
-    for (let i = 1; i < sequence.value.length; i++) {
-      const destSlug = getSlug(sequence.value[i])
-      url += `/${destSlug}~--~7-20`
-    }
+  // Kayak multi-city: /flights/BER-FRA/2026-08-10/FRA-JFK/2026-08-13
+  const kayakLink = computed(() => {
+    if (legs.value.length === 0) return '#'
+    const path = legs.value.map(l => `${l.from}-${l.to}/${l.date}`).join('/')
+    return `https://www.kayak.com/flights/${path}`
+  })
 
-    return url + '/'
+  const googleFlightsLink = computed(() => {
+    if (legs.value.length === 0) return '#'
+    return googleFlightsUrl(legs.value)
   })
 
   // Actions
@@ -108,7 +115,9 @@ export function useFlightPlanning(airportsByIata: Ref<Map<string, Airport>>) {
     isRouteFinalized,
     startDateValue,
     startDate,
-    kiwiLink,
+    stayNights,
+    kayakLink,
+    googleFlightsLink,
     resetSequence,
     finalizeRoute,
     addToSequence,
